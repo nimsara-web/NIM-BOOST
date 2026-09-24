@@ -8,41 +8,79 @@
 <body>
 <div class="dash-header" style="border-bottom:2px solid #ec4899">
   <a href="/admin" class="logo">👑 NIMORA ADMIN</a>
-  <div><a href="/admin" style="color:#06b6d4;text-decoration:none">← Back</a></div>
+  <div>
+    <a href="/admin" style="margin:0 10px;color:#06b6d4;text-decoration:none">Dashboard</a>
+    <a href="/admin/users" style="margin:0 10px;color:#06b6d4;text-decoration:none">Users</a>
+    <a href="/admin/orders" style="margin:0 10px;color:#06b6d4;text-decoration:none">Orders</a>
+    <a href="/logout" style="margin-left:18px;color:#ec4899;text-decoration:none">Logout</a>
+  </div>
 </div>
 
 <div class="container">
   <h2 style="font-family:Orbitron;margin-bottom:20px">Manage Services</h2>
 
+  <!-- ============ ADD NEW SERVICE ============ -->
   <div class="card" style="margin-bottom:30px">
     <h3>➕ Add New Service</h3>
     <form method="POST" action="/admin/services" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:14px">
-      <input name="category" placeholder="Category (TikTok)" required style="padding:10px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:10px">
-      <input name="name" placeholder="Service Name" required style="padding:10px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:10px">
-      <input name="price_per_1000" type="number" step="0.01" placeholder="Price / 1000" required style="padding:10px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:10px">
-      <input name="min_qty" type="number" placeholder="Min Qty" value="100" style="padding:10px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:10px">
-      <input name="max_qty" type="number" placeholder="Max Qty" value="100000" style="padding:10px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:10px">
+      <input name="category" placeholder="Category (TikTok)" required
+             style="padding:10px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:10px">
+      <input name="name" placeholder="Service Name" required
+             style="padding:10px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:10px">
+      <input name="price_per_1000" type="number" step="0.01" placeholder="Price / 1000" required
+             style="padding:10px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:10px">
+      <input name="min_qty" type="number" placeholder="Min Qty" value="100"
+             style="padding:10px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:10px">
+      <input name="max_qty" type="number" placeholder="Max Qty" value="100000"
+             style="padding:10px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:10px">
       <button class="btn" type="submit">Add</button>
     </form>
   </div>
 
+  <!-- ============ SERVICES TABLE ============ -->
   <table>
-    <tr><th>ID</th><th>Category</th><th>Name</th><th>Price/1000</th><th>Min</th><th>Max</th><th>Status</th><th>Actions</th></tr>
-    <% services.forEach(s => { %>
+    <tr>
+      <th>ID</th>
+      <th>Category</th>
+      <th>Name</th>
+      <th>Price/1000</th>
+      <th>Min</th>
+      <th>Max</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+    <% if(services && services.length > 0) { %>
+      <% services.forEach(s => { %>
+        <tr>
+          <td>#<%= s._id.toString().slice(-6) %></td>
+          <td><%= s.category %></td>
+          <td><%= s.name %></td>
+          <td>$<%= s.price_per_1000.toFixed(2) %></td>
+          <td><%= s.min_qty %></td>
+          <td><%= s.max_qty %></td>
+          <td><%= s.active ? '✅ Active' : '❌ Off' %></td>
+          <td style="display:flex;gap:6px">
+            <form method="POST" action="/admin/services/<%= s._id %>/toggle" style="display:inline">
+              <button class="btn" style="padding:5px 10px;font-size:12px">
+                <%= s.active ? 'Disable' : 'Enable' %>
+              </button>
+            </form>
+            <form method="POST" action="/admin/services/<%= s._id %>/delete" style="display:inline"
+                  onsubmit="return confirm('Are you sure you want to delete this service?')">
+              <button class="btn" style="padding:5px 10px;font-size:12px;background:linear-gradient(90deg,#ef4444,#ec4899)">
+                Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    <% } else { %>
       <tr>
-        <td>#<%= s.id %></td>
-        <td><%= s.category %></td>
-        <td><%= s.name %></td>
-        <td>$<%= s.price_per_1000.toFixed(2) %></td>
-        <td><%= s.min_qty %></td>
-        <td><%= s.max_qty %></td>
-        <td><%= s.active ? '✅ Active' : '❌ Off' %></td>
-        <td style="display:flex;gap:6px">
-          <form method="POST" action="/admin/services/<%= s.id %>/toggle"><button class="btn" style="padding:5px 10px;font-size:12px">Toggle</button></form>
-          <form method="POST" action="/admin/services/<%= s.id %>/delete"><button class="btn" style="padding:5px 10px;font-size:12px;background:linear-gradient(90deg,#ef4444,#ec4899)">Delete</button></form>
+        <td colspan="8" style="text-align:center;color:#9ca3af;padding:20px">
+          No services yet. Add one above!
         </td>
       </tr>
-    <% }) %>
+    <% } %>
   </table>
 </div>
 </body>
