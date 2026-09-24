@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>My Orders — NIMORA BOOST</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="dash-header">
+  <a href="/user" class="logo">⚡ NIMORA BOOST</a>
+  <div><a href="/user" style="color:#06b6d4;text-decoration:none">← Back</a></div>
+</div>
+
+<div class="container">
+  <h2 style="font-family:Orbitron;margin-bottom:20px">My Orders</h2>
+  <table>
+    <tr><th>ID</th><th>Service</th><th>Link</th><th>Qty</th><th>Cost</th><th>Status</th><th>Date</th></tr>
+    <% orders.forEach(o => { %>
+      <tr>
+        <td>#<%= o.id %></td>
+        <td><%= o.service_name %></td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= o.link %></td>
+        <td><%= o.quantity %></td>
+        <td>$<%= o.cost.toFixed(4) %></td>
+        <td><span class="status <%= o.status %>"><%= o.status %></span></td>
+        <td><%= o.created_at %></td>
+      </tr>
+    <% }) %>
+  </table>
+</div>
+</body>
+</html>
