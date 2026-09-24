@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Users — NIMORA Admin</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="dash-header" style="border-bottom:2px solid #ec4899">
+  <a href="/admin" class="logo">👑 NIMORA ADMIN</a>
+  <div><a href="/admin" style="color:#06b6d4;text-decoration:none">← Back</a></div>
+</div>
+
+<div class="container">
+  <h2 style="font-family:Orbitron;margin-bottom:20px">All Users</h2>
+  <table>
+    <tr><th>ID</th><th>Username</th><th>Email</th><th>Balance</th><th>Role</th><th>Add Balance</th></tr>
+    <% users.forEach(u => { %>
+      <tr>
+        <td>#<%= u.id %></td>
+        <td><%= u.username %></td>
+        <td><%= u.email %></td>
+        <td>$<%= u.balance.toFixed(4) %></td>
+        <td><%= u.role %></td>
+        <td>
+          <form method="POST" action="/admin/users/<%= u.id %>/balance" style="display:flex;gap:8px">
+            <input type="number" step="0.01" name="amount" placeholder="e.g. 5" style="width:100px;padding:6px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:8px">
+            <button class="btn" style="padding:6px 14px;font-size:12px">+ Add</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+  </table>
+</div>
+</body>
+</html>
