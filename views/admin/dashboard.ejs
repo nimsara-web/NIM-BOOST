@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin — NIMORA BOOST</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="dash-header" style="border-bottom:2px solid #ec4899">
+  <a href="/admin" class="logo">👑 NIMORA ADMIN</a>
+  <div>
+    <a href="/admin/users" style="margin:0 10px;color:#06b6d4;text-decoration:none">Users</a>
+    <a href="/admin/orders" style="margin:0 10px;color:#06b6d4;text-decoration:none">Orders</a>
+    <a href="/admin/services" style="margin:0 10px;color:#06b6d4;text-decoration:none">Services</a>
+    <a href="/logout" style="margin-left:18px;color:#ec4899;text-decoration:none">Logout</a>
+  </div>
+</div>
+
+<div class="container">
+  <h2 style="font-family:Orbitron;margin-bottom:20px">Admin Dashboard</h2>
+
+  <div class="grid">
+    <div class="card"><h3>👥 Users</h3><div class="price"><%= stats.users %></div></div>
+    <div class="card"><h3>📦 Orders</h3><div class="price"><%= stats.orders %></div></div>
+    <div class="card"><h3>⏳ Pending</h3><div class="price"><%= stats.pending %></div></div>
+    <div class="card"><h3>💰 Revenue</h3><div class="price">$<%= stats.revenue.toFixed(2) %></div></div>
+  </div>
+
+  <h3 style="margin-top:40px;font-family:Orbitron">Recent Orders</h3>
+  <table>
+    <tr><th>ID</th><th>User</th><th>Service</th><th>Qty</th><th>Cost</th><th>Status</th></tr>
+    <% recentOrders.forEach(o => { %>
+      <tr>
+        <td>#<%= o.id %></td>
+        <td><%= o.username %></td>
+        <td><%= o.service_name %></td>
+        <td><%= o.quantity %></td>
+        <td>$<%= o.cost.toFixed(4) %></td>
+        <td><span class="status <%= o.status %>"><%= o.status %></span></td>
+      </tr>
+    <% }) %>
+  </table>
+</div>
+</body>
+</html>
