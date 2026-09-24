@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database');
+const { User, Service, Order, Transaction } = require('../database');
 
 function adminAuth(req, res, next) {
   if (!req.session.user || req.session.user.role !== 'admin') return res.redirect('/login');
@@ -9,57 +9,93 @@ function adminAuth(req, res, next) {
 
 router.use(adminAuth);
 
-router.get('/', (req, res) => {
-  const stats = {
-    users: db.prepare("SELECT COUNT(*) c FROM users WHERE role='user'").get().c,
-    orders: db.prepare("SELECT COUNT(*) c FROM orders").get().c,
-    pending: db.prepare("SELECT COUNT(*) c FROM orders WHERE status='pending'").get().c,
-    revenue: db.prepare("SELECT COALESCE(SUM(cost),0) s FROM orders").get().s
-  };
-  const recentOrders = db.prepare("SELECT o.*, u.username, s.name as service_name FROM orders o JOIN users u ON u.id=o.user_id JOIN services s ON s.id=o.service_id ORDER BY o.id DESC LIMIT 15").all();
-  res.render('admin/dashboard', { stats, recentOrders });
+router.get('/', async (req, res) => {
+  try {
+    const [users, orders, pending, revenueAgg] = await Promise.all([
+      User.countDocuments({ role: 'user' }),
+      Order.countDocuments(),
+      Order.countDocuments({ status: 'pending' }),
+      Order.aggregate([{ $group: { _id: null, total: { $sum: '$cost' } } }]),
+    ]);
+    const stats = {
+      users: users || 0,
+      orders: orders || 0,
+      pending: pending || 0,
+      revenue: (revenueAgg && revenueAgg[0] && revenueAgg[0].total) || 0,
+    };
+    const recentOrders = await Order.find()
+      .populate('user', 'username')
+      .populate('service', 'name')
+      .sort({ createdAt: -1 })
+      .limit(15)
+      .lean();
+    res.render('admin/dashboard', { stats, recentOrders });
+  } catch (e) {
+    console.error('Admin dashboard error:', e.message);
+    console.error(e.stack);
+    res.status(500).send('Admin error: ' + e.message);
+  }
 });
 
-router.get('/users', (req, res) => {
-  const users = db.prepare("SELECT * FROM users ORDER BY id DESC").all();
+router.get('/users', async (req, res) => {
+  const users = await User.find().sort({ createdAt: -1 }).lean();
   res.render('admin/users', { users });
 });
 
-router.post('/users/:id/balance', (req, res) => {
-  const { amount } = req.body;
-  db.prepare("UPDATE users SET balance = balance + ? WHERE id=?").run(parseFloat(amount), req.params.id);
-  db.prepare("INSERT INTO transactions (user_id,amount,type,note) VALUES (?,?,?,?)").run(req.params.id, parseFloat(amount), 'admin', 'Admin top-up');
+router.post('/users/:id/balance', async (req, res) => {
+  const amount = parseFloat(req.body.amount);
+  await User.findByIdAndUpdate(req.params.id, { $inc: { balance: amount } });
+  await Transaction.create({
+    user: req.params.id,
+    amount,
+    type: 'admin',
+    note: 'Admin top-up',
+  });
   res.redirect('/admin/users');
 });
 
-router.get('/orders', (req, res) => {
-  const orders = db.prepare("SELECT o.*, u.username, s.name as service_name FROM orders o JOIN users u ON u.id=o.user_id JOIN services s ON s.id=o.service_id ORDER BY o.id DESC").all();
+router.get('/orders', async (req, res) => {
+  const orders = await Order.find()
+    .populate('user', 'username')
+    .populate('service', 'name')
+    .sort({ createdAt: -1 })
+    .lean();
   res.render('admin/orders', { orders });
 });
 
-router.post('/orders/:id/status', (req, res) => {
-  db.prepare("UPDATE orders SET status=? WHERE id=?").run(req.body.status, req.params.id);
+router.post('/orders/:id/status', async (req, res) => {
+  await Order.findByIdAndUpdate(req.params.id, { status: req.body.status });
   res.redirect('/admin/orders');
 });
 
-router.get('/services', (req, res) => {
-  const services = db.prepare("SELECT * FROM services ORDER BY id DESC").all();
+router.get('/services', async (req, res) => {
+  const services = await Service.find().sort({ createdAt: -1 }).lean();
   res.render('admin/services', { services });
 });
 
-router.post('/services', (req, res) => {
+router.post('/services', async (req, res) => {
   const { category, name, price_per_1000, min_qty, max_qty } = req.body;
-  db.prepare("INSERT INTO services (category,name,price_per_1000,min_qty,max_qty) VALUES (?,?,?,?,?)").run(category, name, parseFloat(price_per_1000), parseInt(min_qty), parseInt(max_qty));
+  await Service.create({
+    category,
+    name,
+    price_per_1000: parseFloat(price_per_1000),
+    min_qty: parseInt(min_qty),
+    max_qty: parseInt(max_qty),
+  });
   res.redirect('/admin/services');
 });
 
-router.post('/services/:id/toggle', (req, res) => {
-  db.prepare("UPDATE services SET active = 1 - active WHERE id=?").run(req.params.id);
+router.post('/services/:id/toggle', async (req, res) => {
+  const svc = await Service.findById(req.params.id);
+  if (svc) {
+    svc.active = !svc.active;
+    await svc.save();
+  }
   res.redirect('/admin/services');
 });
 
-router.post('/services/:id/delete', (req, res) => {
-  db.prepare("DELETE FROM services WHERE id=?").run(req.params.id);
+router.post('/services/:id/delete', async (req, res) => {
+  await Service.findByIdAndDelete(req.params.id);
   res.redirect('/admin/services');
 });
 
