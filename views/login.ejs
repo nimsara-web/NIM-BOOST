@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Login — NIMORA BOOST</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <a href="/" class="logo">⚡ NIMORA BOOST</a>
+  <div class="nav-links"><a href="/register">Register</a></div>
+</nav>
+
+<div class="form-box">
+  <h2>LOGIN</h2>
+  <% if(error) { %><div class="alert error"><%= error %></div><% } %>
+  <% if(req.query.registered) { %><div class="alert success">Account created! Please login.</div><% } %>
+  <form method="POST" action="/login">
+    <input type="text" name="username" placeholder="Username or Email" required>
+    <input type="password" name="password" placeholder="Password" required>
+    <button class="btn" type="submit">Login →</button>
+  </form>
+  <p style="text-align:center;margin-top:18px;color:#9ca3af;font-size:14px">
+    No account? <a href="/register" style="color:#06b6d4">Register</a>
+  </p>
+</div>
+</body>
+</html>
