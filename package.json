@@ -1,22 +1,11 @@
 {
   "name": "nimora-boost",
   "version": "1.0.0",
-  "description": "NIMORA BOOST — SMM Panel for TikTok, WhatsApp, Instagram & YouTube",
+  "description": "NIMORA BOOST — SMM Panel",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
-  "keywords": [
-    "smm",
-    "panel",
-    "nimora",
-    "boost",
-    "tiktok",
-    "whatsapp",
-    "instagram",
-    "youtube"
-  ],
   "author": "NIMORA BOOST",
   "license": "MIT",
   "engines": {
@@ -29,6 +18,7 @@
     "ejs": "^3.1.10",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
-    "mongoose": "^8.5.0"
+    "mongoose": "^8.5.0",
+    "mongodb": "^6.7.0"
   }
 }
