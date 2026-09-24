@@ -7,7 +7,7 @@ const { User } = require('../database');
 router.get('/login', (req, res) => {
   res.render('login', {
     error: null,
-    registered: req.query.registered || null,  // ← req.query pass කරනවා
+    registered: req.query.registered || null,
   });
 });
 
@@ -23,7 +23,6 @@ router.post('/register', async (req, res) => {
     if (!username || !email || !password) throw new Error('All fields required');
     if (password.length < 6) throw new Error('Password must be 6+ chars');
 
-    // Duplicate check
     const exists = await User.findOne({ $or: [{ username }, { email }] });
     if (exists) throw new Error('Username or email already taken');
 
@@ -32,6 +31,7 @@ router.post('/register', async (req, res) => {
 
     res.redirect('/login?registered=1');
   } catch (e) {
+    console.error('Register error:', e.message);
     res.render('register', { error: e.message });
   }
 });
@@ -49,14 +49,15 @@ router.post('/login', async (req, res) => {
     }
 
     req.session.user = {
-      id: user._id.toString(),   // MongoDB ObjectId → string
+      id: user._id.toString(),
       username: user.username,
       role: user.role,
     };
 
     res.redirect(user.role === 'admin' ? '/admin' : '/user');
   } catch (e) {
-    res.render('login', { error: 'Server error', registered: null });
+    console.error('Login error:', e.message);
+    res.render('login', { error: 'Server error: ' + e.message, registered: null });
   }
 });
 
