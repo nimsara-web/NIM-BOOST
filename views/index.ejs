@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIMORA BOOST — #1 SMM Panel</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<nav class="navbar">
+  <div class="logo">⚡ NIMORA BOOST</div>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="#services">Services</a>
+    <% if(user){ %>
+      <a href="<%= user.role==='admin'?'/admin':'/user' %>">Dashboard</a>
+      <a href="/logout">Logout</a>
+    <% } else { %>
+      <a href="/login">Login</a>
+      <a href="/register">Register</a>
+    <% } %>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>BOOST YOUR SOCIAL MEDIA</h1>
+  <p>The fastest and cheapest SMM panel for TikTok, WhatsApp, Instagram & YouTube. Instant delivery, 24/7 support.</p>
+  <div>
+    <a href="/register" class="btn">🚀 Get Started</a>
+    <a href="#services" class="btn secondary" style="margin-left:12px">View Services</a>
+  </div>
+
+  <div style="display:flex;gap:50px;margin-top:60px;flex-wrap:wrap;justify-content:center">
+    <div><div style="font-size:36px;font-weight:900;color:#8b5cf6" data-count="50000">0</div><div style="color:#9ca3af">Orders Delivered</div></div>
+    <div><div style="font-size:36px;font-weight:900;color:#06b6d4" data-count="12000">0</div><div style="color:#9ca3af">Happy Users</div></div>
+    <div><div style="font-size:36px;font-weight:900;color:#ec4899" data-count="100">0</div><div style="color:#9ca3af">Services</div></div>
+  </div>
+</section>
+
+<section class="container" id="services">
+  <h2 style="font-family:Orbitron;font-size:32px;text-align:center;margin-bottom:40px;background:linear-gradient(90deg,#8b5cf6,#06b6d4);-webkit-background-clip:text;background-clip:text;color:transparent">
+    OUR SERVICES
+  </h2>
+  <div class="grid">
+    <% services.forEach(s => { %>
+      <div class="card">
+        <h3><%= s.category %> • <%= s.name %></h3>
+        <p>Min: <%= s.min_qty %> | Max: <%= s.max_qty %></p>
+        <div class="price">$<%= s.price_per_1000.toFixed(2) %> <span>/ 1000</span></div>
+      </div>
+    <% }) %>
+  </div>
+</section>
+
+<section class="container" style="text-align:center">
+  <h2 style="font-family:Orbitron;font-size:28px;margin-bottom:20px">WHY NIMORA BOOST?</h2>
+  <div class="grid" style="margin-top:30px">
+    <div class="card"><h3>⚡ Instant Delivery</h3><p>Orders start within seconds.</p></div>
+    <div class="card"><h3>🔒 Secure</h3><p>Your data is safe with us.</p></div>
+    <div class="card"><h3>💰 Cheapest Rates</h3><p>Best prices in the market.</p></div>
+    <div class="card"><h3>📞 24/7 Support</h3><p>WhatsApp: 0784280074</p></div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2025 NIMORA BOOST — All rights reserved.</p>
+  <p style="margin-top:8px">📞 WhatsApp: 0784280074</p>
+</footer>
+
+<a href="https://wa.me/94784280074" class="whatsapp-float" target="_blank">💬</a>
+<script src="/js/main.js"></script>
+</body>
+</html>
