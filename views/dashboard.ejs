@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dashboard — NIMORA BOOST</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="dash-header">
+  <a href="/" class="logo">⚡ NIMORA BOOST</a>
+  <div>
+    <a href="/user/new-order" class="btn" style="padding:10px 20px;font-size:14px">+ New Order</a>
+    <span class="balance-badge">💵 $<%= user.balance.toFixed(4) %></span>
+    <a href="/logout" style="margin-left:18px;color:#ec4899;text-decoration:none">Logout</a>
+  </div>
+</div>
+
+<div class="container">
+  <h2 style="font-family:Orbitron;margin-bottom:20px">Welcome, <%= user.username %> 👋</h2>
+
+  <div class="grid">
+    <a href="/user/new-order" class="card" style="text-decoration:none">
+      <h3>🛒 New Order</h3><p>Place a new boost order</p>
+    </a>
+    <a href="/user/orders" class="card" style="text-decoration:none">
+      <h3>📦 My Orders</h3><p>View order history</p>
+    </a>
+    <a href="https://wa.me/94784280074" class="card" style="text-decoration:none">
+      <h3>💬 Support</h3><p>Contact admin on WhatsApp</p>
+    </a>
+  </div>
+
+  <h3 style="margin-top:40px;font-family:Orbitron">Recent Orders</h3>
+  <table>
+    <tr><th>ID</th><th>Service</th><th>Link</th><th>Qty</th><th>Cost</th><th>Status</th></tr>
+    <% orders.forEach(o => { %>
+      <tr>
+        <td>#<%= o.id %></td>
+        <td><%= o.service_name %></td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= o.link %></td>
+        <td><%= o.quantity %></td>
+        <td>$<%= o.cost.toFixed(4) %></td>
+        <td><span class="status <%= o.status %>"><%= o.status %></span></td>
+      </tr>
+    <% }) %>
+  </table>
+</div>
+</body>
+</html>
