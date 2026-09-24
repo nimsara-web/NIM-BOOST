@@ -29,16 +29,20 @@
   <h3 style="margin-top:40px;font-family:Orbitron">Recent Orders</h3>
   <table>
     <tr><th>ID</th><th>User</th><th>Service</th><th>Qty</th><th>Cost</th><th>Status</th></tr>
-    <% recentOrders.forEach(o => { %>
-      <tr>
-        <td>#<%= o.id %></td>
-        <td><%= o.username %></td>
-        <td><%= o.service_name %></td>
-        <td><%= o.quantity %></td>
-        <td>$<%= o.cost.toFixed(4) %></td>
-        <td><span class="status <%= o.status %>"><%= o.status %></span></td>
-      </tr>
-    <% }) %>
+    <% if(recentOrders && recentOrders.length > 0) { %>
+      <% recentOrders.forEach(o => { %>
+        <tr>
+          <td>#<%= o._id.toString().slice(-6) %></td>
+          <td><%= (o.user && o.user.username) ? o.user.username : 'N/A' %></td>
+          <td><%= (o.service && o.service.name) ? o.service.name : 'N/A' %></td>
+          <td><%= o.quantity %></td>
+          <td>$<%= o.cost.toFixed(4) %></td>
+          <td><span class="status <%= o.status %>"><%= o.status %></span></td>
+        </tr>
+      <% }) %>
+    <% } else { %>
+      <tr><td colspan="6" style="text-align:center;color:#9ca3af">No orders yet</td></tr>
+    <% } %>
   </table>
 </div>
 </body>
