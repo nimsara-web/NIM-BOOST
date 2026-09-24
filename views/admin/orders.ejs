@@ -8,35 +8,56 @@
 <body>
 <div class="dash-header" style="border-bottom:2px solid #ec4899">
   <a href="/admin" class="logo">👑 NIMORA ADMIN</a>
-  <div><a href="/admin" style="color:#06b6d4;text-decoration:none">← Back</a></div>
+  <div>
+    <a href="/admin" style="margin:0 10px;color:#06b6d4;text-decoration:none">Dashboard</a>
+    <a href="/admin/users" style="margin:0 10px;color:#06b6d4;text-decoration:none">Users</a>
+    <a href="/admin/services" style="margin:0 10px;color:#06b6d4;text-decoration:none">Services</a>
+    <a href="/logout" style="margin-left:18px;color:#ec4899;text-decoration:none">Logout</a>
+  </div>
 </div>
 
 <div class="container">
   <h2 style="font-family:Orbitron;margin-bottom:20px">All Orders</h2>
+
   <table>
-    <tr><th>ID</th><th>User</th><th>Service</th><th>Link</th><th>Qty</th><th>Cost</th><th>Status</th><th>Update</th></tr>
-    <% orders.forEach(o => { %>
-      <tr>
-        <td>#<%= o.id %></td>
-        <td><%= o.username %></td>
-        <td><%= o.service_name %></td>
-        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= o.link %></td>
-        <td><%= o.quantity %></td>
-        <td>$<%= o.cost.toFixed(4) %></td>
-        <td><span class="status <%= o.status %>"><%= o.status %></span></td>
-        <td>
-          <form method="POST" action="/admin/orders/<%= o.id %>/status" style="display:flex;gap:6px">
-            <select name="status" style="padding:6px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:8px">
-              <option <%= o.status==='pending'?'selected':'' %>>pending</option>
-              <option <%= o.status==='processing'?'selected':'' %>>processing</option>
-              <option <%= o.status==='completed'?'selected':'' %>>completed</option>
-              <option <%= o.status==='cancelled'?'selected':'' %>>cancelled</option>
-            </select>
-            <button class="btn" style="padding:6px 12px;font-size:12px">Save</button>
-          </form>
-        </td>
-      </tr>
-    <% }) %>
+    <tr>
+      <th>ID</th>
+      <th>User</th>
+      <th>Service</th>
+      <th>Link</th>
+      <th>Qty</th>
+      <th>Cost</th>
+      <th>Status</th>
+      <th>Update</th>
+    </tr>
+    <% if(orders && orders.length > 0) { %>
+      <% orders.forEach(o => { %>
+        <tr>
+          <td>#<%= o._id.toString().slice(-6) %></td>
+          <td><%= (o.user && o.user.username) ? o.user.username : 'N/A' %></td>
+          <td><%= (o.service && o.service.name) ? o.service.name : 'N/A' %></td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            <a href="<%= o.link %>" target="_blank" style="color:#06b6d4;text-decoration:none"><%= o.link %></a>
+          </td>
+          <td><%= o.quantity %></td>
+          <td>$<%= o.cost.toFixed(4) %></td>
+          <td><span class="status <%= o.status %>"><%= o.status %></span></td>
+          <td>
+            <form method="POST" action="/admin/orders/<%= o._id %>/status" style="display:flex;gap:6px">
+              <select name="status" style="padding:6px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:8px">
+                <option value="pending" <%= o.status === 'pending' ? 'selected' : '' %>>pending</option>
+                <option value="processing" <%= o.status === 'processing' ? 'selected' : '' %>>processing</option>
+                <option value="completed" <%= o.status === 'completed' ? 'selected' : '' %>>completed</option>
+                <option value="cancelled" <%= o.status === 'cancelled' ? 'selected' : '' %>>cancelled</option>
+              </select>
+              <button class="btn" style="padding:6px 12px;font-size:12px">Save</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    <% } else { %>
+      <tr><td colspan="8" style="text-align:center;color:#9ca3af">No orders yet</td></tr>
+    <% } %>
   </table>
 </div>
 </body>
