@@ -8,28 +8,51 @@
 <body>
 <div class="dash-header" style="border-bottom:2px solid #ec4899">
   <a href="/admin" class="logo">👑 NIMORA ADMIN</a>
-  <div><a href="/admin" style="color:#06b6d4;text-decoration:none">← Back</a></div>
+  <div>
+    <a href="/admin" style="margin:0 10px;color:#06b6d4;text-decoration:none">Dashboard</a>
+    <a href="/admin/orders" style="margin:0 10px;color:#06b6d4;text-decoration:none">Orders</a>
+    <a href="/admin/services" style="margin:0 10px;color:#06b6d4;text-decoration:none">Services</a>
+    <a href="/logout" style="margin-left:18px;color:#ec4899;text-decoration:none">Logout</a>
+  </div>
 </div>
 
 <div class="container">
   <h2 style="font-family:Orbitron;margin-bottom:20px">All Users</h2>
   <table>
-    <tr><th>ID</th><th>Username</th><th>Email</th><th>Balance</th><th>Role</th><th>Add Balance</th></tr>
-    <% users.forEach(u => { %>
-      <tr>
-        <td>#<%= u.id %></td>
-        <td><%= u.username %></td>
-        <td><%= u.email %></td>
-        <td>$<%= u.balance.toFixed(4) %></td>
-        <td><%= u.role %></td>
-        <td>
-          <form method="POST" action="/admin/users/<%= u.id %>/balance" style="display:flex;gap:8px">
-            <input type="number" step="0.01" name="amount" placeholder="e.g. 5" style="width:100px;padding:6px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:8px">
-            <button class="btn" style="padding:6px 14px;font-size:12px">+ Add</button>
-          </form>
-        </td>
-      </tr>
-    <% }) %>
+    <tr>
+      <th>ID</th>
+      <th>Username</th>
+      <th>Email</th>
+      <th>Balance</th>
+      <th>Role</th>
+      <th>Add Balance</th>
+    </tr>
+    <% if(users && users.length > 0) { %>
+      <% users.forEach(u => { %>
+        <tr>
+          <td>#<%= u._id.toString().slice(-6) %></td>
+          <td><%= u.username %></td>
+          <td><%= u.email %></td>
+          <td>$<%= u.balance.toFixed(4) %></td>
+          <td>
+            <% if(u.role === 'admin') { %>
+              <span style="color:#ec4899;font-weight:bold">👑 Admin</span>
+            <% } else { %>
+              User
+            <% } %>
+          </td>
+          <td>
+            <form method="POST" action="/admin/users/<%= u._id %>/balance" style="display:flex;gap:8px">
+              <input type="number" step="0.01" name="amount" placeholder="e.g. 5" required
+                     style="width:100px;padding:6px;background:#0b0b16;color:#fff;border:1px solid #8b5cf6;border-radius:8px">
+              <button class="btn" style="padding:6px 14px;font-size:12px">+ Add</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    <% } else { %>
+      <tr><td colspan="6" style="text-align:center;color:#9ca3af">No users yet</td></tr>
+    <% } %>
   </table>
 </div>
 </body>
