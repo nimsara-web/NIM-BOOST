@@ -2,13 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { User, Service, Order, Transaction } = require('../database');
 
+// ============ ADMIN AUTH ============
 function adminAuth(req, res, next) {
-  if (!req.session.user || req.session.user.role !== 'admin') return res.redirect('/login');
+  if (!req.session.user || req.session.user.role !== 'admin') {
+    return res.redirect('/login');
+  }
   next();
 }
 
 router.use(adminAuth);
 
+// ============ ADMIN DASHBOARD ============
 router.get('/', async (req, res) => {
   try {
     const [users, orders, pending, revenueAgg] = await Promise.all([
@@ -37,66 +41,111 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ============ USERS ============
 router.get('/users', async (req, res) => {
-  const users = await User.find().sort({ createdAt: -1 }).lean();
-  res.render('admin/users', { users });
+  try {
+    const users = await User.find().sort({ createdAt: -1 }).lean();
+    res.render('admin/users', { users });
+  } catch (e) {
+    console.error('Admin users error:', e.message);
+    res.status(500).send('Error: ' + e.message);
+  }
 });
 
 router.post('/users/:id/balance', async (req, res) => {
-  const amount = parseFloat(req.body.amount);
-  await User.findByIdAndUpdate(req.params.id, { $inc: { balance: amount } });
-  await Transaction.create({
-    user: req.params.id,
-    amount,
-    type: 'admin',
-    note: 'Admin top-up',
-  });
-  res.redirect('/admin/users');
+  try {
+    const amount = parseFloat(req.body.amount);
+    if (isNaN(amount)) return res.redirect('/admin/users');
+
+    await User.findByIdAndUpdate(req.params.id, { $inc: { balance: amount } });
+    await Transaction.create({
+      user: req.params.id,
+      amount,
+      type: 'admin',
+      note: 'Admin top-up',
+    });
+    res.redirect('/admin/users');
+  } catch (e) {
+    console.error('Balance update error:', e.message);
+    res.status(500).send('Error: ' + e.message);
+  }
 });
 
+// ============ ORDERS ============
 router.get('/orders', async (req, res) => {
-  const orders = await Order.find()
-    .populate('user', 'username')
-    .populate('service', 'name')
-    .sort({ createdAt: -1 })
-    .lean();
-  res.render('admin/orders', { orders });
+  try {
+    const orders = await Order.find()
+      .populate('user', 'username')
+      .populate('service', 'name')
+      .sort({ createdAt: -1 })
+      .lean();
+    res.render('admin/orders', { orders });
+  } catch (e) {
+    console.error('Admin orders error:', e.message);
+    res.status(500).send('Error: ' + e.message);
+  }
 });
 
 router.post('/orders/:id/status', async (req, res) => {
-  await Order.findByIdAndUpdate(req.params.id, { status: req.body.status });
-  res.redirect('/admin/orders');
+  try {
+    await Order.findByIdAndUpdate(req.params.id, { status: req.body.status });
+    res.redirect('/admin/orders');
+  } catch (e) {
+    console.error('Order status error:', e.message);
+    res.status(500).send('Error: ' + e.message);
+  }
 });
 
+// ============ SERVICES ============
 router.get('/services', async (req, res) => {
-  const services = await Service.find().sort({ createdAt: -1 }).lean();
-  res.render('admin/services', { services });
+  try {
+    const services = await Service.find().sort({ createdAt: -1 }).lean();
+    res.render('admin/services', { services });
+  } catch (e) {
+    console.error('Admin services error:', e.message);
+    res.status(500).send('Error: ' + e.message);
+  }
 });
 
 router.post('/services', async (req, res) => {
-  const { category, name, price_per_1000, min_qty, max_qty } = req.body;
-  await Service.create({
-    category,
-    name,
-    price_per_1000: parseFloat(price_per_1000),
-    min_qty: parseInt(min_qty),
-    max_qty: parseInt(max_qty),
-  });
-  res.redirect('/admin/services');
+  try {
+    const { category, name, price_per_1000, min_qty, max_qty } = req.body;
+    await Service.create({
+      category,
+      name,
+      price_per_1000: parseFloat(price_per_1000),
+      min_qty: parseInt(min_qty),
+      max_qty: parseInt(max_qty),
+    });
+    res.redirect('/admin/services');
+  } catch (e) {
+    console.error('Add service error:', e.message);
+    res.status(500).send('Error: ' + e.message);
+  }
 });
 
 router.post('/services/:id/toggle', async (req, res) => {
-  const svc = await Service.findById(req.params.id);
-  if (svc) {
-    svc.active = !svc.active;
-    await svc.save();
+  try {
+    const svc = await Service.findById(req.params.id);
+    if (svc) {
+      svc.active = !svc.active;
+      await svc.save();
+    }
+    res.redirect('/admin/services');
+  } catch (e) {
+    console.error('Toggle error:', e.message);
+    res.status(500).send('Error: ' + e.message);
   }
-  res.redirect('/admin/services');
 });
 
 router.post('/services/:id/delete', async (req, res) => {
-  await Service.findByIdAndDelete(req.params.id);
-  res.redirect('/admin/services');
+  try {
+    await Service.findByIdAndDelete(req.params.id);
+    res.redirect('/admin/services');
+  } catch (e) {
+    console.error('Delete error:', e.message);
+    res.status(500).send('Error: ' + e.message);
+  }
 });
 
 module.exports = router;
