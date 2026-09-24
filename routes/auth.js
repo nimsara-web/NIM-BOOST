@@ -1,37 +1,70 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const db = require('../database');
+const { User } = require('../database');
 
-router.get('/login', (req, res) => res.render('login', { error: null }));
-router.get('/register', (req, res) => res.render('register', { error: null }));
+// ============ LOGIN PAGE ============
+router.get('/login', (req, res) => {
+  res.render('login', {
+    error: null,
+    registered: req.query.registered || null,  // ← req.query pass කරනවා
+  });
+});
 
-router.post('/register', (req, res) => {
+// ============ REGISTER PAGE ============
+router.get('/register', (req, res) => {
+  res.render('register', { error: null });
+});
+
+// ============ REGISTER POST ============
+router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
   try {
     if (!username || !email || !password) throw new Error('All fields required');
     if (password.length < 6) throw new Error('Password must be 6+ chars');
+
+    // Duplicate check
+    const exists = await User.findOne({ $or: [{ username }, { email }] });
+    if (exists) throw new Error('Username or email already taken');
+
     const hash = bcrypt.hashSync(password, 10);
-    db.prepare("INSERT INTO users (username,email,password) VALUES (?,?,?)").run(username, email, hash);
+    await User.create({ username, email, password: hash });
+
     res.redirect('/login?registered=1');
   } catch (e) {
     res.render('register', { error: e.message });
   }
 });
 
-router.post('/login', (req, res) => {
+// ============ LOGIN POST ============
+router.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  const user = db.prepare("SELECT * FROM users WHERE username=? OR email=?").get(username, username);
-  if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.render('login', { error: 'Invalid credentials' });
+  try {
+    const user = await User.findOne({ $or: [{ username }, { email: username }] });
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      return res.render('login', {
+        error: 'Invalid credentials',
+        registered: null,
+      });
+    }
+
+    req.session.user = {
+      id: user._id.toString(),   // MongoDB ObjectId → string
+      username: user.username,
+      role: user.role,
+    };
+
+    res.redirect(user.role === 'admin' ? '/admin' : '/user');
+  } catch (e) {
+    res.render('login', { error: 'Server error', registered: null });
   }
-  req.session.user = { id: user.id, username: user.username, role: user.role };
-  res.redirect(user.role === 'admin' ? '/admin' : '/user');
 });
 
+// ============ LOGOUT ============
 router.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
 });
 
 module.exports = router;
