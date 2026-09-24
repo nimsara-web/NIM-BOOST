@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>New Order — NIMORA BOOST</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="dash-header">
+  <a href="/user" class="logo">⚡ NIMORA BOOST</a>
+  <div><a href="/user" style="color:#06b6d4;text-decoration:none">← Back</a></div>
+</div>
+
+<div class="form-box">
+  <h2>NEW ORDER</h2>
+  <% if(error) { %><div class="alert error"><%= error %></div><% } %>
+  <% if(success) { %><div class="alert success"><%= success %></div><% } %>
+  <form method="POST" action="/user/new-order">
+    <select name="service_id" required>
+      <option value="">-- Select Service --</option>
+      <% services.forEach(s => { %>
+        <option value="<%= s.id %>"><%= s.category %> — <%= s.name %> ($<%= s.price_per_1000 %>/1000)</option>
+      <% }) %>
+    </select>
+    <input type="text" name="link" placeholder="Link (TikTok/WhatsApp/etc URL)" required>
+    <input type="number" name="quantity" placeholder="Quantity" required>
+    <button class="btn" type="submit">Place Order 🚀</button>
+  </form>
+</div>
+</body>
+</html>
