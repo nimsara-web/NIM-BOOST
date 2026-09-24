@@ -1,89 +1,117 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const db = new Database(path.join(__dirname, 'nimora.db'));
-
-db.exec(`
-CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
-  balance REAL DEFAULT 0,
-  role TEXT DEFAULT 'user',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS services (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  category TEXT NOT NULL,
-  name TEXT NOT NULL,
-  price_per_1000 REAL NOT NULL,
-  min_qty INTEGER DEFAULT 100,
-  max_qty INTEGER DEFAULT 100000,
-  active INTEGER DEFAULT 1
-);
-
-CREATE TABLE IF NOT EXISTS orders (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  service_id INTEGER NOT NULL,
-  link TEXT NOT NULL,
-  quantity INTEGER NOT NULL,
-  cost REAL NOT NULL,
-  status TEXT DEFAULT 'pending',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(user_id) REFERENCES users(id),
-  FOREIGN KEY(service_id) REFERENCES services(id)
-);
-
-CREATE TABLE IF NOT EXISTS transactions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  amount REAL NOT NULL,
-  type TEXT NOT NULL,
-  note TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS settings (
-  key TEXT PRIMARY KEY,
-  value TEXT
-);
-`);
-
-// Default admin
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const adminExists = db.prepare("SELECT * FROM users WHERE role='admin'").get();
-if (!adminExists) {
-  const hash = bcrypt.hashSync('nimora123', 10);
-  db.prepare("INSERT INTO users (username,email,password,role) VALUES (?,?,?,?)")
-    .run('nimora', 'admin@nimora.com', hash, 'admin');
-  console.log('✅ Admin created → username: nimora | password: nimora123');
-}
 
-// Default services
-const svcCount = db.prepare("SELECT COUNT(*) as c FROM services").get().c;
-if (svcCount === 0) {
-  const insert = db.prepare("INSERT INTO services (category,name,price_per_1000,min_qty,max_qty) VALUES (?,?,?,?,?)");
-  const services = [
-    ['TikTok', 'TikTok Views', 5, 100, 1000000],
-    ['TikTok', 'TikTok Likes', 15, 50, 50000],
-    ['TikTok', 'TikTok Followers', 80, 100, 20000],
-    ['TikTok', 'TikTok Comments', 200, 10, 5000],
-    ['WhatsApp', 'WhatsApp Channel Followers', 120, 100, 10000],
-    ['WhatsApp', 'WhatsApp Channel Reactions', 60, 50, 20000],
-    ['Instagram', 'Instagram Followers', 90, 100, 20000],
-    ['Instagram', 'Instagram Likes', 20, 50, 50000],
-    ['YouTube', 'YouTube Views', 150, 500, 100000],
-    ['YouTube', 'YouTube Subscribers', 400, 50, 10000],
+// ============ CONNECT ============
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,
+    });
+    console.log('✅ MongoDB connected');
+    await seedData();
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err.message);
+    process.exit(1);
+  }
+};
+
+// ============ SCHEMAS ============
+
+const userSchema = new mongoose.Schema({
+  username: { type: String, unique: true, required: true, trim: true },
+  email: { type: String, unique: true, required: true, lowercase: true },
+  password: { type: String, required: true },
+  balance: { type: Number, default: 0 },
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+}, { timestamps: true });
+
+const serviceSchema = new mongoose.Schema({
+  category: { type: String, required: true },
+  name: { type: String, required: true },
+  price_per_1000: { type: Number, required: true },
+  min_qty: { type: Number, default: 100 },
+  max_qty: { type: Number, default: 100000 },
+  active: { type: Boolean, default: true },
+}, { timestamps: true });
+
+const orderSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  service: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true },
+  link: { type: String, required: true },
+  quantity: { type: Number, required: true },
+  cost: { type: Number, required: true },
+  status: {
+    type: String,
+    enum: ['pending', 'processing', 'completed', 'cancelled'],
+    default: 'pending'
+  },
+}, { timestamps: true });
+
+const transactionSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  amount: { type: Number, required: true },
+  type: { type: String, enum: ['order', 'admin', 'refund'], required: true },
+  note: { type: String },
+}, { timestamps: true });
+
+const settingsSchema = new mongoose.Schema({
+  key: { type: String, unique: true, required: true },
+  value: { type: String },
+});
+
+// ============ MODELS ============
+const User = mongoose.model('User', userSchema);
+const Service = mongoose.model('Service', serviceSchema);
+const Order = mongoose.model('Order', orderSchema);
+const Transaction = mongoose.model('Transaction', transactionSchema);
+const Settings = mongoose.model('Settings', settingsSchema);
+
+// ============ SEED ============
+async function seedData() {
+  const adminExists = await User.findOne({ role: 'admin' });
+  if (!adminExists) {
+    const hash = bcrypt.hashSync('nimora123', 10);
+    await User.create({
+      username: 'nimora',
+      email: 'admin@nimora.com',
+      password: hash,
+      role: 'admin',
+    });
+    console.log('✅ Admin created → nimora / nimora123');
+  }
+
+  const svcCount = await Service.countDocuments();
+  if (svcCount === 0) {
+    await Service.insertMany([
+      { category: 'TikTok', name: 'TikTok Views', price_per_1000: 5, min_qty: 100, max_qty: 1000000 },
+      { category: 'TikTok', name: 'TikTok Likes', price_per_1000: 15, min_qty: 50, max_qty: 50000 },
+      { category: 'TikTok', name: 'TikTok Followers', price_per_1000: 80, min_qty: 100, max_qty: 20000 },
+      { category: 'TikTok', name: 'TikTok Comments', price_per_1000: 200, min_qty: 10, max_qty: 5000 },
+      { category: 'WhatsApp', name: 'WhatsApp Channel Followers', price_per_1000: 120, min_qty: 100, max_qty: 10000 },
+      { category: 'WhatsApp', name: 'WhatsApp Channel Reactions', price_per_1000: 60, min_qty: 50, max_qty: 20000 },
+      { category: 'Instagram', name: 'Instagram Followers', price_per_1000: 90, min_qty: 100, max_qty: 20000 },
+      { category: 'Instagram', name: 'Instagram Likes', price_per_1000: 20, min_qty: 50, max_qty: 50000 },
+      { category: 'YouTube', name: 'YouTube Views', price_per_1000: 150, min_qty: 500, max_qty: 100000 },
+      { category: 'YouTube', name: 'YouTube Subscribers', price_per_1000: 400, min_qty: 50, max_qty: 10000 },
+    ]);
+    console.log('✅ Default services added');
+  }
+
+  const defaults = [
+    { key: 'site_name', value: 'NIMORA BOOST' },
+    { key: 'contact_whatsapp', value: '0784280074' },
+    { key: 'usd_rate', value: '300' },
   ];
-  services.forEach(s => insert.run(...s));
-  console.log('✅ Default services added');
+  for (const s of defaults) {
+    await Settings.updateOne({ key: s.key }, { $setOnInsert: s }, { upsert: true });
+  }
 }
 
-// Default settings
-db.prepare("INSERT OR IGNORE INTO settings (key,value) VALUES (?,?)").run('site_name', 'NIMORA BOOST');
-db.prepare("INSERT OR IGNORE INTO settings (key,value) VALUES (?,?)").run('contact_whatsapp', '0784280074');
-db.prepare("INSERT OR IGNORE INTO settings (key,value) VALUES (?,?)").run('usd_rate', '300');
-
-module.exports = db;
+module.exports = {
+  connectDB,
+  User,
+  Service,
+  Order,
+  Transaction,
+  Settings,
+};
