@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { User, Service, Order, Transaction } = require('../database');
+const { placeOrder } = require('../services/smmProvider');
 
 // ============ AUTH MIDDLEWARE ============
 function auth(req, res, next) {
@@ -40,44 +41,37 @@ router.get('/new-order', auth, async (req, res) => {
   }
 });
 
-// ============ PLACE ORDER ============
+// ============ PLACE ORDER (Auto Boost) ============
 router.post('/new-order', auth, async (req, res) => {
   const { service_id, link, quantity } = req.body;
   let services = [];
 
   try {
-    // Services load කරන්න (error එකක් ආවත් form එකේ පෙන්නන්න)
+    // Services load කරන්න
     services = await Service.find({ active: true }).lean();
 
     // ============ VALIDATION ============
-    
-    // 1. Service select කරලා තියෙනවද?
     if (!service_id || service_id.trim() === '') {
       throw new Error('Please select a service');
     }
 
-    // 2. Valid MongoDB ObjectId ද? (24 hex chars)
     if (!service_id.match(/^[0-9a-fA-F]{24}$/)) {
       throw new Error('Invalid service selected');
     }
 
-    // 3. Service DB එකේ තියෙනවද?
     const svc = await Service.findById(service_id);
     if (!svc) throw new Error('Service not found');
     if (!svc.active) throw new Error('This service is currently disabled');
 
-    // 4. Link එක තියෙනවද?
     if (!link || link.trim() === '') {
       throw new Error('Please enter a link');
     }
 
-    // 5. Quantity එක valid ද?
     const qty = parseInt(quantity);
     if (!qty || isNaN(qty) || qty <= 0) {
       throw new Error('Please enter a valid quantity');
     }
 
-    // 6. Quantity min/max ඇතුලේ ද?
     if (qty < svc.min_qty || qty > svc.max_qty) {
       throw new Error(`Quantity must be between ${svc.min_qty} and ${svc.max_qty}`);
     }
@@ -88,7 +82,6 @@ router.post('/new-order', auth, async (req, res) => {
 
     if (!user) throw new Error('User not found');
 
-    // 7. Balance එක ඇති ද?
     if (user.balance < cost) {
       throw new Error(
         `Insufficient balance. Required: $${cost.toFixed(4)}, Available: $${user.balance.toFixed(4)}. Contact admin to top-up.`
@@ -100,12 +93,13 @@ router.post('/new-order', auth, async (req, res) => {
     await user.save();
 
     // ============ CREATE ORDER ============
-    await Order.create({
+    const order = await Order.create({
       user: user._id,
       service: svc._id,
       link: link.trim(),
       quantity: qty,
       cost,
+      status: 'pending',
     });
 
     // ============ LOG TRANSACTION ============
@@ -116,11 +110,42 @@ router.post('/new-order', auth, async (req, res) => {
       note: `Order: ${svc.name} x${qty}`,
     });
 
+    // ============ AUTO BOOST ============
+    let message = `✅ Order placed! Service: ${svc.name} | Qty: ${qty} | Cost: $${cost.toFixed(4)}`;
+
+    if (svc.provider_service_id) {
+      console.log(`🚀 Auto-boosting order #${order._id}...`);
+      const result = await placeOrder(svc.provider_service_id, link.trim(), qty);
+
+      if (result && result.order) {
+        // ✅ Auto boost success
+        order.provider_order_id = result.order.toString();
+        order.auto_boosted = true;
+        order.status = 'processing';
+        await order.save();
+        message += ` | 🚀 Boost started! Provider ID: ${result.order}`;
+        console.log(`✅ Auto boost success: ${result.order}`);
+      } else {
+        // ❌ Auto boost failed
+        order.error_message = result?.error || 'Provider error';
+        order.status = 'pending';
+        await order.save();
+        message += ` | ⚠️ Auto-boost failed. Admin will process manually.`;
+        console.log(`❌ Auto boost failed:`, result);
+      }
+    } else {
+      // No provider mapping → manual
+      order.status = 'pending';
+      await order.save();
+      message += ` | ⚠️ Will be processed manually by admin.`;
+      console.log(`⚠️ No provider mapping: ${svc.name}`);
+    }
+
     // ============ SUCCESS ============
     res.render('new-order', {
       services,
       error: null,
-      success: `✅ Order placed successfully! Service: ${svc.name} | Qty: ${qty} | Cost: $${cost.toFixed(4)}`,
+      success: message,
     });
 
   } catch (e) {
