@@ -41,13 +41,13 @@ router.get('/new-order', auth, async (req, res) => {
   }
 });
 
-// ============ PLACE ORDER (Auto Boost) ============
+// ============ PLACE ORDER (Auto Boost — SMM Africa v3) ============
 router.post('/new-order', auth, async (req, res) => {
   const { service_id, link, quantity } = req.body;
   let services = [];
 
   try {
-    // Services load කරන්න
+    // Services load කරන්න (error එකක් ආවත් form එකේ පෙන්නන්න)
     services = await Service.find({ active: true }).lean();
 
     // ============ VALIDATION ============
@@ -110,12 +110,22 @@ router.post('/new-order', auth, async (req, res) => {
       note: `Order: ${svc.name} x${qty}`,
     });
 
-    // ============ AUTO BOOST ============
+    // ============ AUTO BOOST (SMM Africa v3) ============
     let message = `✅ Order placed! Service: ${svc.name} | Qty: ${qty} | Cost: $${cost.toFixed(4)}`;
 
     if (svc.provider_service_id) {
-      console.log(`🚀 Auto-boosting order #${order._id}...`);
-      const result = await placeOrder(svc.provider_service_id, link.trim(), qty);
+      console.log(`🚀 Auto-boosting order #${order._id} → SMM Africa service ${svc.provider_service_id}...`);
+
+      // ✅ Idempotency key — order ID එකෙන් generate කරනවා
+      // ඒ නිසා retry කළත් duplicate charge එකක් වෙන්නේ නැහැ
+      const idempotencyKey = `nimora-order-${order._id.toString()}`;
+
+      const result = await placeOrder(
+        svc.provider_service_id,
+        link.trim(),
+        qty,
+        idempotencyKey
+      );
 
       if (result && result.order) {
         // ✅ Auto boost success
@@ -123,21 +133,25 @@ router.post('/new-order', auth, async (req, res) => {
         order.auto_boosted = true;
         order.status = 'processing';
         await order.save();
-        message += ` | 🚀 Boost started! Provider ID: ${result.order}`;
-        console.log(`✅ Auto boost success: ${result.order}`);
+
+        const chargedInfo = result.charged ? ` (charged $${result.charged})` : '';
+        message += ` | 🚀 Boost started! Provider ID: ${result.order}${chargedInfo}`;
+        console.log(`✅ Auto boost success: order=${result.order}, charged=${result.charged}`);
       } else {
         // ❌ Auto boost failed
         order.error_message = result?.error || 'Provider error';
         order.status = 'pending';
         await order.save();
-        message += ` | ⚠️ Auto-boost failed. Admin will process manually.`;
+
+        // User ට neutral message එකක් (technical details නැහැ)
+        message += ` | ⏳ Order queued. Admin will process shortly.`;
         console.log(`❌ Auto boost failed:`, result);
       }
     } else {
       // No provider mapping → manual
       order.status = 'pending';
       await order.save();
-      message += ` | ⚠️ Will be processed manually by admin.`;
+      message += ` | ⏳ Order queued. Admin will process manually.`;
       console.log(`⚠️ No provider mapping: ${svc.name}`);
     }
 
