@@ -6,6 +6,8 @@ const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
       serverSelectionTimeoutMS: 10000,
+      maxPoolSize: 10,   // ← Connection pool (speed සඳහා)
+      minPoolSize: 2,
     });
     console.log('✅ MongoDB connected');
     await seedData();
@@ -25,6 +27,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
 }, { timestamps: true });
 
+// ✅ Service — Auto Boost සඳහා provider_service_id
 const serviceSchema = new mongoose.Schema({
   category: { type: String, required: true },
   name: { type: String, required: true },
@@ -32,8 +35,13 @@ const serviceSchema = new mongoose.Schema({
   min_qty: { type: Number, default: 100 },
   max_qty: { type: Number, default: 100000 },
   active: { type: Boolean, default: true },
+
+  // 🔥 Auto Boost සඳහා අලුත් fields
+  provider_service_id: { type: String, default: null },  // Ezkify Service ID
+  provider_name: { type: String, default: 'Ezkify' },    // Provider name
 }, { timestamps: true });
 
+// ✅ Order — Auto Boost tracking සඳහා
 const orderSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   service: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true },
@@ -42,9 +50,16 @@ const orderSchema = new mongoose.Schema({
   cost: { type: Number, required: true },
   status: {
     type: String,
-    enum: ['pending', 'processing', 'completed', 'cancelled'],
+    enum: ['pending', 'processing', 'completed', 'cancelled', 'failed'],
     default: 'pending'
   },
+
+  // 🔥 Auto Boost tracking fields
+  provider_order_id: { type: String, default: null },   // Ezkify order ID
+  auto_boosted: { type: Boolean, default: false },      // Auto boost වුණාද?
+  error_message: { type: String, default: null },       // Error එකක් නම්
+  start_count: { type: String, default: null },         // Provider start count
+  remains: { type: String, default: null },             // Provider remains
 }, { timestamps: true });
 
 const transactionSchema = new mongoose.Schema({
@@ -59,6 +74,14 @@ const settingsSchema = new mongoose.Schema({
   value: { type: String },
 });
 
+// ============ INDEXES (Speed සඳහා) ============
+userSchema.index({ username: 1 });
+userSchema.index({ email: 1 });
+orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ status: 1 });
+orderSchema.index({ provider_order_id: 1 });
+transactionSchema.index({ user: 1, createdAt: -1 });
+
 // ============ MODELS ============
 const User = mongoose.model('User', userSchema);
 const Service = mongoose.model('Service', serviceSchema);
@@ -68,6 +91,7 @@ const Settings = mongoose.model('Settings', settingsSchema);
 
 // ============ SEED ============
 async function seedData() {
+  // Admin
   const adminExists = await User.findOne({ role: 'admin' });
   if (!adminExists) {
     const hash = bcrypt.hashSync('nimora123', 10);
@@ -80,6 +104,7 @@ async function seedData() {
     console.log('✅ Admin created → nimora / nimora123');
   }
 
+  // Services
   const svcCount = await Service.countDocuments();
   if (svcCount === 0) {
     await Service.insertMany([
@@ -97,6 +122,7 @@ async function seedData() {
     console.log('✅ Default services added');
   }
 
+  // Settings
   const defaults = [
     { key: 'site_name', value: 'NIMORA BOOST' },
     { key: 'contact_whatsapp', value: '0784280074' },
